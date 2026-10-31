@@ -3,7 +3,7 @@
 A 4×4 grid. The agent starts at the top-left and learns to reach the bottom-right. Every move costs 1, so a shortest path has return −6.
 
 ```bash
-python3 gridworld_qlearning.py
+python3 gridworld/gridworld_qlearning.py
 ```
 
 Python 3 is enough. There are no extra packages.
