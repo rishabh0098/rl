@@ -90,29 +90,64 @@ Reach for a different method when the problem leaves that list:
 
 ## The learning rule
 
-**Q-learning update.** The assignment in `QLearningAgent.update`. This is the idea from [What Q-learning is](#what-q-learning-is), written as one step of arithmetic. After each transition it moves the stored `Q(s, a)` toward a target built from the reward just received and the best value in the next state:
+One move changes one number. The agent was in cell `s`, took action `a`, received `reward`, and landed in cell `s'`. `update` rewrites `Q(s, a)` and leaves every other entry alone.
+
+It does that in three lines, which are `QLearningAgent.update`:
 
 ```text
-Q(s, a) ← Q(s, a) + α · (target − Q(s, a))
+future = 0                          if this move reached the goal
+future = best number stored at s'   otherwise
 
-target = reward                          if done
-target = reward + γ · max over a' of Q(s', a')    otherwise
+target = reward + gamma * future
+Q(s, a) = Q(s, a) + alpha * (target - Q(s, a))
 ```
 
-**Learning rate (alpha, α).** How far this visit moves the stored number toward the target. The agent is constructed with `alpha=0.5`, so each update lands halfway between the old value and the target. 1 would replace the old value with the target. 0 would leave the table unchanged.
+`future` is the agent's guess of what the rest of the path is worth, read from the table at the cell it just entered. Reaching the goal ends the episode, so the rest of the path is worth 0. Any other landing cell still has a path ahead, so `future` is the largest Q-value stored there: the best action the table currently knows in `s'`.
 
-**Discount factor (gamma, γ).** The weight on the next state's value inside the target. This program uses `gamma=1`, so a later step counts the same as the step just taken. Together with a reward of −1, a learned Q-value matches minus the remaining steps. A gamma below 1 would shrink the contribution of steps that are still far away.
+`target` is what this one move says `Q(s, a)` should be. The move itself paid `reward` (−1). The rest of the trip is `future`. Add them.
 
-**Bootstrap.** The target uses the table's own current estimate, `max Q(s', ·)`, rather than waiting to add up the rest of the episode. When `done` is true there is no future to estimate, and that term is 0.
+The last line does not jump straight to `target`. It takes one step from the old number toward `target`. How big that step is depends on `alpha`.
 
-**Temporal-difference error.** `target − Q(s, a)`, the gap between what this transition implies and what the table currently says. The update adds alpha times that gap. A gap of 0 means the entry already agrees with the reward and the next state.
+**A move onto the goal.** The agent is in the cell just left of `G` and steps right. Reward is −1, the episode ends, so `future` is 0 and `target` is −1. The table still has 0 for that move, and `alpha` is 0.5:
 
-**Off-policy.** The target takes the best next action (`max`), not whichever action exploration happens to sample on the following step. The table is learning the greedy policy while the behavior during training is still partly random.
+```text
+new Q = 0 + 0.5 * (−1 − 0) = −0.5
+```
 
-**Exploration.** Choosing an action that is not the current best, so a better path can still be found.
+The same move again, now starting from −0.5:
 
-**Exploitation.** Choosing the greedy action and using what the table already says.
+```text
+new Q = −0.5 + 0.5 * (−1 − (−0.5)) = −0.75
+```
 
-**Epsilon (ε).** The probability of exploring on the current step. In `choose_action`, with probability epsilon the agent draws one of the four actions uniformly. Otherwise it takes `best_action`.
+Each visit covers half the remaining distance to −1. After enough visits that entry sits at −1, which means "this action costs one step and then the episode is over."
 
-**Epsilon schedule.** `epsilon_schedule` sets epsilon to 1.0 on episode 0 (every action is random) and decreases it in a straight line to 0.05 on the last episode (mostly greedy, with a little exploration left).
+**A move one cell further away.** The agent steps right into that cell beside the goal. Suppose the best number stored in the landing cell is already −1. Then:
+
+```text
+target = −1 + gamma * (−1)
+```
+
+This program uses `gamma = 1`, so `target = −2`. The move costs 1, and the best continuation from the next cell costs another 1. The same halfway step pulls the stored number toward −2. That is how "six steps remain" at the start gets built: each cell learns its number from the cell it steps into, working backward from the goal.
+
+**Learning rate (alpha).** `alpha = 0.5` means each visit moves halfway from the old number to the target. `alpha = 1` would replace the old number with the target on the first visit. `alpha = 0` would leave the table unchanged.
+
+**Discount factor (gamma).** The weight on `future` inside the target. `gamma = 1` counts a later step the same as the step just taken, which is why a learned value equals minus the number of steps left. A smaller gamma would count far-away steps less.
+
+**Bootstrap.** `future` is read from the table's current guess at `s'`. The agent does not wait to finish the episode and add up every later reward. It trusts the number already written in the next cell. On the goal that guess is defined to be 0, because there is no next cell.
+
+**Temporal-difference error.** The gap `target − Q(s, a)`. In the first example the gap was −1 − 0 = −1, and the update added `alpha` times that gap. A gap of 0 means the stored number already matches what this move just showed, so the entry stays as it is.
+
+**Why the best next action.** `future` uses the largest Q-value in `s'`, whichever action that is. The action the agent happens to try on the following step can be a random wander. The number written for this step still assumes that, once there, the agent will take the best action the table knows. The table is therefore learning the arrows you see at the end, even during episodes that still wander.
+
+## How actions are chosen
+
+The update above only runs after a move. Choosing the move is separate, in `choose_action`.
+
+**Exploration.** Picking an action at random, so the agent can still find a better path than the one the table currently likes.
+
+**Exploitation.** Picking the action with the largest Q-value and trusting the table.
+
+**Epsilon (ε).** The probability of exploring on this step. With probability epsilon, `choose_action` draws one of the four actions at random. Otherwise it takes the best action.
+
+**Epsilon schedule.** `epsilon_schedule` sets epsilon to 1.0 on episode 0, so every action is random, and lowers it in a straight line to 0.05 on the last episode, so almost every action follows the table. The 0.05 that remains keeps a little exploration through the end of training.
