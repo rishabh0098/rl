@@ -14,7 +14,7 @@ the number of steps still to go. No Gym and no neural network: the table is
 the whole agent.
 
 Run:
-    python3 gridworld_qlearning.py
+    python3 gridworld/gridworld_qlearning.py
 """
 
 from __future__ import annotations

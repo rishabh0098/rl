@@ -8,7 +8,7 @@ python3 tictactoe/tictactoe_qlearning.py
 
 Python 3 is enough. There are no extra packages. Training plays 100,000 games and takes a few seconds. `random.seed(0)` makes a run repeat.
 
-The update rule is the same one as in the [grid world](../README.md). That page is the longer introduction to Q-learning. This page is about what a state, a next state, and a reward are when the opponent is the other seat.
+The update rule is the same one as in the [grid world](../gridworld/README.md). That page is the longer introduction to Q-learning. This page is about what a state, a next state, and a reward are when the opponent is the other seat.
 
 ## What is different from the grid
 
